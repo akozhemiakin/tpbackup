@@ -1,0 +1,29 @@
+[package]
+name = "tpbackup"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.3.21", features = ["derive"] }
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "fs", "macros"] }
+tokio-fs = "0.1.7"
+thiserror = "1.0.44"
+url = "2.4.0"
+base64 = "0.21.2"
+env_logger = "0.10.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+indicatif = "0.17.6"
+futures = "0.3.28"
+tar = "0.4"
+flate2 = "1"
+chrono = "0.4"
+
+[profile.release]
+# Options to reduce binary size in release mode
+opt-level = 'z'     # Optimize for size
+lto = true          # Enable link-time optimization
+# codegen-units = 1   # Reduce number of codegen units to increase optimizations
+# panic = 'abort'     # Abort on panic
+strip = true        # Strip symbols from binary*
