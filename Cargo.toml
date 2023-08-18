@@ -2,6 +2,12 @@
 name = "tpbackup"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/akozhemiakin/tpbackup"
+description = """
+CLI utility that allows to backup Targetprocess resources.
+"""
 
 [dependencies]
 clap = { version = "4.3.21", features = ["derive"] }

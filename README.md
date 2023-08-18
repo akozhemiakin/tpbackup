@@ -1,6 +1,6 @@
 # Targetprocess Backup Utility
 
-CLI utility that allows you to backup
+CLI utility that allows to backup
 [Targetprocess](https://www.targetprocess.com/guide/) resources.
 
 ## Usage
