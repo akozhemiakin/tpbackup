@@ -3,6 +3,8 @@
 CLI utility that allows to backup
 [Targetprocess](https://www.targetprocess.com/guide/) resources.
 
+[![asciicast](https://asciinema.org/a/jbWenlKrO1t6R250k4lL3BBLF.svg)](https://asciinema.org/a/jbWenlKrO1t6R250k4lL3BBLF)
+
 ## Installation
 You can install the utility with the following command if you have
 `cargo` installed:
