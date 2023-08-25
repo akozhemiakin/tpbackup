@@ -12,12 +12,13 @@ CLI utility that allows to backup Targetprocess resources.
 [dependencies]
 clap = { version = "4.3.21", features = ["derive"] }
 reqwest = { version = "0.11", features = ["json"] }
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "fs", "macros"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "fs", "macros", "io-std", "tracing"] }
 tokio-fs = "0.1.7"
 thiserror = "1.0.44"
 url = "2.4.0"
 base64 = "0.21.2"
-env_logger = "0.10.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter", "std"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 indicatif = "0.17.6"

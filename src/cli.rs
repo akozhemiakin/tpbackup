@@ -64,8 +64,6 @@ struct BackupArgs {
 
 impl Cli {
     pub async fn run() {
-        env_logger::init();
-
         let cli = Cli::parse();
 
         match cli.commands {
