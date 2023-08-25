@@ -10,7 +10,7 @@ CLI utility that allows to backup Targetprocess resources.
 """
 
 [dependencies]
-clap = { version = "4.3.21", features = ["derive"] }
+clap = { version = "4.3", features = ["derive", "env"] }
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "fs", "macros", "io-std", "tracing"] }
 tokio-fs = "0.1.7"
@@ -26,6 +26,7 @@ futures = "0.3.28"
 tar = "0.4"
 flate2 = "1"
 chrono = "0.4"
+async-trait = "0.1.73"
 
 [profile.release]
 # Options to reduce binary size in release mode

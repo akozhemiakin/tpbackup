@@ -1,6 +1,7 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 use base64::Engine;
+use futures::Future;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::{
     header::{self, HeaderMap},
@@ -8,17 +9,17 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::{
-    fs::{create_dir_all, File},
-    sync::Mutex,
-};
-use tokio::{io::AsyncWriteExt, task::JoinSet};
+use tokio::sync::Mutex;
+use tokio::task::JoinSet;
+use tracing::{debug, trace};
 use url::Url;
+
+use crate::writer::Writer;
 
 const DETECTION_START: u32 = 500;
 const CHUNK: u32 = 100;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Client {
     endpoint: Url,
     client: reqwest::Client,
@@ -75,6 +76,7 @@ impl Client {
             .unwrap()
     }
 
+    #[tracing::instrument]
     pub async fn detect_last_item(&self, resource: &str) -> u32 {
         // Find first empty page
         let mut right = DETECTION_START;
@@ -113,7 +115,13 @@ impl Client {
         }
     }
 
-    pub async fn backup_resource(&self, resource: &str, file: &mut File, pb: &Option<ProgressBar>) {
+    #[tracing::instrument]
+    pub async fn backup_resource<O>(&self, resource: &str, out: &mut O, pb: &Option<ProgressBar>)
+    where
+        O: Writer,
+    {
+        debug!(resource = resource, "starting resource backup");
+
         let mut skip = 0;
 
         if let Some(ref pb) = pb {
@@ -128,7 +136,8 @@ impl Client {
             pb.set_length(last as u64);
         }
 
-        file.write_all(b"{\"items\": [").await.unwrap();
+        out.write(format!("{{\"type\": \"{resource}\", \"items\": [").as_bytes())
+            .await;
 
         loop {
             let page = self.get_resource_page(resource, CHUNK, skip).await;
@@ -139,7 +148,7 @@ impl Client {
 
             let s = serde_json::to_string(&page.items).unwrap();
 
-            file.write_all(s[1..s.len() - 1].as_bytes()).await.unwrap();
+            out.write(s[1..s.len() - 1].as_bytes()).await;
 
             if let Some(ref pb) = pb {
                 pb.inc(page.items.len() as u64);
@@ -152,17 +161,23 @@ impl Client {
             skip += CHUNK;
         }
 
-        file.write_all(b"]}").await.unwrap();
+        out.write(b"]}").await;
+
+        trace!(resource = resource, "resource backup complete");
     }
 
-    pub async fn backup_all(
+    pub async fn backup_all<C, Fut, T>(
         &self,
         streams: usize,
         progress: bool,
-        dir: PathBuf,
         resources: Vec<String>,
-    ) {
-        create_dir_all(&dir).await.unwrap();
+        out: C,
+    ) where
+        C: (Fn(String) -> Fut) + Send + Sync + 'static,
+        Fut: Future<Output = T> + Send,
+        T: Writer + Send,
+    {
+        let out = Arc::new(out);
 
         let rn = resources.len();
 
@@ -206,7 +221,7 @@ impl Client {
 
             let tpb = tpb.clone();
 
-            let dir = dir.clone();
+            let out = out.clone();
 
             js.spawn(async move {
                 while let Some(resource) = {
@@ -214,13 +229,9 @@ impl Client {
 
                     m.pop()
                 } {
-                    let mut p = dir.clone();
+                    let mut writer = out(resource.clone()).await;
 
-                    p.push(format!("{resource}.json"));
-
-                    let mut file = File::create(p).await.unwrap();
-
-                    client.backup_resource(&resource, &mut file, &pb).await;
+                    client.backup_resource(&resource, &mut writer, &pb).await;
 
                     if let Some(ref pb) = pb {
                         pb.reset();

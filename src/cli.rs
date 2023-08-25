@@ -1,7 +1,12 @@
 use std::{fs, path::PathBuf};
 
-use crate::{client::Client, utils};
+use crate::{client::Client, utils, writer::SyncWriter};
 use clap::{Args, Parser, Subcommand};
+use tokio::{
+    fs::{create_dir_all, File},
+    io::stdout,
+};
+use tracing::debug;
 
 /// This utility cycles through all or some of Targetprocess resources and backs
 /// up each type of resource into a separate JSON file. It also provides
@@ -61,6 +66,11 @@ struct BackupArgs {
     /// To get full list of resources included by default run `tpbackup resources`
     #[arg(short, long)]
     resources: Option<String>,
+
+    /// Outputs result into stdout as a sequence of json objects
+    /// (one for each resource) without separators between them.
+    #[arg(short, long, conflicts_with = "compress", conflicts_with = "out_dir")]
+    stdout: bool,
 }
 
 impl Cli {
@@ -84,40 +94,75 @@ impl Cli {
     async fn backup(cli: BackupArgs) {
         let client = Client::new(cli.host, cli.user, cli.password);
 
-        // Write somewhere in temp dir for tarballs or to some local dir otherwise
-        let dir = if cli.compress {
-            let mut p = std::env::temp_dir();
+        let is_stdout = cli.stdout;
 
-            p.push("tpbackup");
+        if is_stdout {
+            debug!("start backup in stdout");
 
-            let _ = fs::remove_dir_all(&p);
-
-            p
+            client
+                .backup_all(
+                    1,
+                    false,
+                    cli.resources
+                        .map(|v| v.split(',').map(|v| v.trim().to_string()).collect())
+                        .unwrap_or_else(|| {
+                            utils::RESOURCES.iter().map(|v| v.to_string()).collect()
+                        }),
+                    |_| async { SyncWriter::new(stdout()) },
+                )
+                .await;
         } else {
-            cli.out_dir.unwrap_or(PathBuf::from(r"./out"))
-        };
+            debug!("start backup in files");
 
-        client
-            .backup_all(
-                5,
-                !cli.no_progress,
-                dir.clone(),
-                cli.resources
-                    .map(|v| v.split(',').map(|v| v.trim().to_string()).collect())
-                    .unwrap_or_else(|| utils::RESOURCES.iter().map(|v| v.to_string()).collect()),
-            )
-            .await;
+            // Write somewhere in temp dir for tarballs or to some local dir otherwise
+            let dir = if cli.compress {
+                let mut p = std::env::temp_dir();
 
-        // Compress if needed
-        if cli.compress {
-            let out = cli.out.unwrap_or_else(|| {
-                PathBuf::from(format!("tpbackup_{}.tar.gz", utils::yyyymmddhhmm()))
-            });
+                p.push("tpbackup");
 
-            utils::compress_dir_to_tar_gz(&dir, &out).unwrap();
+                let _ = fs::remove_dir_all(&p);
 
-            // Remove contents of a temp directory
-            let _ = fs::remove_dir_all(dir);
+                p
+            } else {
+                cli.out_dir.unwrap_or(PathBuf::from(r"./out"))
+            };
+
+            create_dir_all(dir.clone()).await.unwrap();
+
+            let p = dir.clone();
+
+            client
+                .backup_all(
+                    5,
+                    !cli.no_progress,
+                    cli.resources
+                        .map(|v| v.split(',').map(|v| v.trim().to_string()).collect())
+                        .unwrap_or_else(|| {
+                            utils::RESOURCES.iter().map(|v| v.to_string()).collect()
+                        }),
+                    move |resource| {
+                        let mut p = p.clone();
+
+                        p.push(format!("{resource}.json"));
+
+                        async { File::create(p).await.unwrap() }
+                    },
+                )
+                .await;
+
+            // Compress if needed
+            if cli.compress {
+                debug!("compressing results");
+
+                let out = cli.out.unwrap_or_else(|| {
+                    PathBuf::from(format!("tpbackup_{}.tar.gz", utils::yyyymmddhhmm()))
+                });
+
+                utils::compress_dir_to_tar_gz(&dir, &out).unwrap();
+
+                // Remove contents of a temp directory
+                let _ = fs::remove_dir_all(dir);
+            }
         }
     }
 }

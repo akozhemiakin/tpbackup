@@ -26,6 +26,10 @@ tpbackup backup -u user -p password example.tpondemand.com
 ```bash
 tpbackup backup -u user -p password --compress example.tpondemand.com
 ```
+**Backup to stdout:**
+```bash
+tpbackup backup -u user -p password --stdout
+```
 
 **Backup a subset of the resources**
 ```bash
