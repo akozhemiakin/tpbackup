@@ -27,14 +27,15 @@ struct BackupArgs {
     /// Host name of TargetProcess instance
     ///
     /// Example: myinstance.tpondemand.com
+    #[arg(long, env = "TPB_HOST")]
     host: String,
 
     /// TargetProcess user name
-    #[arg(short, long)]
+    #[arg(short, long, env = "TPB_USER")]
     user: String,
 
     /// TargetProcess password
-    #[arg(short, long)]
+    #[arg(short, long, env = "TPB_PASSWORD")]
     password: String,
 
     /// Hide progress bars
