@@ -62,7 +62,7 @@ impl Client {
 
         self.client
             .request(method, url)
-            .query(&[("format", "json")])
+            .query(&[("format", "json"), ("orderBy", "Id")])
     }
 
     pub async fn get_resource_page(&self, resource: &str, take: u32, skip: u32) -> ResourcePage {
