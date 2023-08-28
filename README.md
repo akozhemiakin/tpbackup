@@ -19,21 +19,21 @@ an option to package these JSON files into a single tarball.
 
 **Backup to a folder:**
 ```bash
-tpbackup backup -u user -p password example.tpondemand.com
+tpbackup backup -u user -p password --host example.tpondemand.com
 ```
 
 **Backup to a tar.gz archive:**
 ```bash
-tpbackup backup -u user -p password --compress example.tpondemand.com
+tpbackup backup -u user -p password --host example.tpondemand.com --compress
 ```
 **Backup to stdout:**
 ```bash
-tpbackup backup -u user -p password --stdout
+tpbackup backup -u user -p password --host example.tpondemand.com --stdout
 ```
 
 **Backup a subset of the resources**
 ```bash
-tpbackup backup -u user -p password -r UserStories,Bugs example.tpondemand.com
+tpbackup backup -u user -p password -r UserStories,Bugs --host example.tpondemand.com
 ``````
 
 **Output a list of default resources**
